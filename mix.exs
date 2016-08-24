@@ -22,7 +22,21 @@ defmodule Barracuda.Mixfile do
     ]
   end
   
-  defp elixirc_paths(:test), do: ["lib", "test/support", "samples"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_),     do: ["lib"]
 
+  defp description do
+    """
+    Is a library that allows generation of HTTP clients in a declarative manner.
+    """
+  end
+
+  defp package do
+    [# These are the default files included in the package
+     name: :barracuda,
+     files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
+     maintainers: ["Alex Shneyderman"],
+     licenses: ["Apache 2.0"],
+     links: %{"GitHub" => "https://github.com/ashneyderman/barracuda"}]
+  end
 end

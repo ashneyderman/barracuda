@@ -29,6 +29,6 @@ use Mix.Config
 #
 #     import_config "#{Mix.env}.exs"
 
-config :barracuda, GithubClient,
+config :barracuda, Github,
   base_url: "https://api.github.com",
   "accept": "application/vnd.github.v3+json"

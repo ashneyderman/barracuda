@@ -1,13 +1,4 @@
-defmodule ResponseHandlers do
-  require Logger
-  alias HTTPoison.Response
-
-  def auth_resp(%Response{ status_code: 200, headers: headers }),
-    do: Enum.into(headers, %{}) |> Dict.get("authorization")
-  
-end
-
-defmodule GithubClient do
+defmodule Github do
   use Barracuda.Compiler, otp_app: :barracuda
   require Logger
   

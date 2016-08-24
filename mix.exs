@@ -29,16 +29,16 @@ defmodule Barracuda.Mixfile do
 
   defp description do
     """
-    Is a library that allows generation of HTTP clients in a declarative manner.
+    Library that allows generation of HTTP clients in a declarative manner.
     """
   end
 
   defp package do
     [# These are the default files included in the package
      name: :barracuda,
-     files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
+     files: ["lib", "mix.exs", "README*", "LICENSE*"],
      maintainers: ["Alex Shneyderman"],
-     licenses: ["Apache 2.0"],
+     licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/ashneyderman/barracuda"}]
   end
 end

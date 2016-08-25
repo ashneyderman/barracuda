@@ -51,3 +51,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
       [applications: [:barracuda]]
     end
     ```
+    
+## Acknowledgements
+
+The original idea and draft implementation is due to [Kevin Montuori](https://github.com/kevinmontuori)

@@ -29,6 +29,7 @@ defmodule Barracuda.HttpWrapper do
   
   defp do_request(method, path, options, args, location) do
     cfg = config(location)
+    pobs = Keyword.get(options, :perf_observer, &default_perf_observer/1)
     {headers, rest_args0} = construct_headers(cfg, options, args)
     {url,     rest_args1} = construct_absolute_url(cfg, path, options, rest_args0)
     body                  = construct_body(headers, options, rest_args1)
@@ -41,18 +42,26 @@ defmodule Barracuda.HttpWrapper do
       #{inspect headers, pretty: true}
     """
     expected = Keyword.get(options, :expect, 200)
-    case apply(Barracuda.HttpWrapper, :request, [method, url, body, headers, options]) do
+    {time, result} = :timer.tc(fn() ->
+                       apply(Barracuda.HttpWrapper, :request, [method, url, body, headers, options])
+                     end)
+    case result do
       {:ok, %Response{ status_code: status_code } = resp} when status_code == expected ->
+        pobs.({:sucess, time, options})
         wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
         wfn.(resp)
       {:ok, %Response{ status_code: status_code } = resp} when status_code != expected ->
+        pobs.({:error, time, options})
         {:error, resp}
-      error -> error
+      error ->
+        pobs.({:error, time, options})
+        error
     end
   end
   
   defp do_request!(method, path, options, args, location) do
     cfg = config(location)
+    pobs = Keyword.get(options, :perf_observer, &default_perf_observer/1)
     {headers, rest_args0} = construct_headers(cfg, options, args)
     {url,     rest_args1} = construct_absolute_url(cfg, path, options, rest_args0)
     body                  = construct_body(headers, options, rest_args1)
@@ -65,17 +74,25 @@ defmodule Barracuda.HttpWrapper do
       #{inspect headers, pretty: true}
     """
     expected = Keyword.get(options, :expect, 200)
-    case apply(Barracuda.HttpWrapper, :request, [method, url, body, headers, options]) do
+    {time, result} = :timer.tc(fn() ->
+                       apply(Barracuda.HttpWrapper, :request, [method, url, body, headers, options])
+                     end)
+    case result do
       {:ok, %Response{ status_code: status_code } = resp}  when status_code == expected ->
         wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
         case wfn.(resp) do
-          {:ok, result} -> result
+          {:ok, result} ->
+            pobs.({:sucess, time, options})
+            result
           {:error, error} ->
+            pobs.({:error, time, options})
             raise(Barracuda.Error, %{ message: "HTTP call resulted in error", data: error })
         end
       {:ok, %Response{ status_code: status_code } = resp}  when status_code != expected ->
+        pobs.({:error, time, options})
         raise(Barracuda.Error, %{ message: "HTTP call resulted in unexpected status code. Expected: #{expected}; Returned: #{status_code}", data: resp })
       other ->
+        pobs.({:error, time, options})
         raise(Barracuda.Error, %{ message: "HTTP call resulted in error response.", data: other })
     end
   end
@@ -98,6 +115,11 @@ defmodule Barracuda.HttpWrapper do
     else
       false
     end
+  end
+  
+  defp default_perf_observer({outcome, time, options}) do
+    action = options |> Keyword.get(:action, "unknown")
+    Logger.debug "#{action}: #{outcome} - #{time/1000} ms"
   end
   
   defp default_response_wrapper(%Response{}=resp) do

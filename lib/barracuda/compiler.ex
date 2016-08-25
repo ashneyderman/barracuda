@@ -101,10 +101,10 @@ defmodule Barracuda.Compiler do
       Module.add_doc(module, line, :def, {action, 1}, args, doc)
 
       case verb  do
-        :get    -> define_action(:do_get,    action, path, options, config)
-        :post   -> define_action(:do_post,   action, path, options, config)
-        :put    -> define_action(:do_put,    action, path, options, config)
-        :delete -> define_action(:do_delete, action, path, options, config)
+        :get    -> define_action(:do_get,    action, path, options |> Keyword.put(:action, action), config)
+        :post   -> define_action(:do_post,   action, path, options |> Keyword.put(:action, action), config)
+        :put    -> define_action(:do_put,    action, path, options |> Keyword.put(:action, action), config)
+        :delete -> define_action(:do_delete, action, path, options |> Keyword.put(:action, action), config)
         verb -> raise "Verb #{ inspect verb } not implemented."
       end
     end

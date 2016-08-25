@@ -31,8 +31,8 @@ defmodule Barracuda.HttpWrapper do
     cfg = config(location)
     pobs = Keyword.get(options, :perf_observer, &default_perf_observer/1)
     {headers, rest_args0} = construct_headers(cfg, options, args)
-    {url,     rest_args1} = construct_absolute_url(cfg, path, options, rest_args0)
-    body                  = construct_body(headers, options, rest_args1)
+    {body,    rest_args1} = construct_body(headers, options, rest_args0)
+    {url,     _rest_args2} = construct_absolute_url(cfg, path, options, rest_args1)
     Logger.debug """
     #{inspect method}: #{inspect path}
       #{inspect options, pretty: true}
@@ -47,7 +47,7 @@ defmodule Barracuda.HttpWrapper do
                      end)
     case result do
       {:ok, %Response{ status_code: status_code } = resp} when status_code == expected ->
-        pobs.({:sucess, time, options})
+        pobs.({:success, time, options})
         wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
         wfn.(resp)
       {:ok, %Response{ status_code: status_code } = resp} when status_code != expected ->
@@ -63,8 +63,8 @@ defmodule Barracuda.HttpWrapper do
     cfg = config(location)
     pobs = Keyword.get(options, :perf_observer, &default_perf_observer/1)
     {headers, rest_args0} = construct_headers(cfg, options, args)
-    {url,     rest_args1} = construct_absolute_url(cfg, path, options, rest_args0)
-    body                  = construct_body(headers, options, rest_args1)
+    {body,    rest_args1} = construct_body(headers, options, rest_args0)
+    {url,     _rest_args2} = construct_absolute_url(cfg, path, options, rest_args1)
     Logger.debug """
     #{inspect method}: #{inspect path}
       #{inspect options, pretty: true}
@@ -82,7 +82,7 @@ defmodule Barracuda.HttpWrapper do
         wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
         case wfn.(resp) do
           {:ok, result} ->
-            pobs.({:sucess, time, options})
+            pobs.({:success, time, options})
             result
           {:error, error} ->
             pobs.({:error, time, options})
@@ -145,8 +145,14 @@ defmodule Barracuda.HttpWrapper do
     end)
   end
   
-  defp construct_body(headers, _options, args),
-    do: args |> Keyword.get(:body, "") |> encode_body(headers)
+  defp construct_body(headers, _options, args) do
+    if Keyword.get(args, :body, nil) do
+      {args |> Keyword.get(:body, "") |> encode_body(headers),
+       Keyword.delete(args, :body)}
+    else
+      {"", args}
+    end
+  end
   
   defp encode_body(body, _headers) when is_binary(body), do: body
   defp encode_body(body, headers),

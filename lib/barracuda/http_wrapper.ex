@@ -42,9 +42,11 @@ defmodule Barracuda.HttpWrapper do
     """
     expected = Keyword.get(options, :expect, 200)
     case apply(method, [url, body, headers, options]) do
-      {:ok, %Response{ status_code: expect } = resp} when expect == expected ->
+      {:ok, %Response{ status_code: status_code } = resp} when status_code == expected ->
         wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
         wfn.(resp)
+      {:ok, %Response{ status_code: status_code } = resp} when status_code != expected ->
+        {:error, resp}
       error -> error
     end
   end
@@ -64,11 +66,17 @@ defmodule Barracuda.HttpWrapper do
     """
     expected = Keyword.get(options, :expect, 200)
     case apply(method, [url, body, headers, options]) do
-      %Response{ status_code: expect } = resp  when expect == expected ->
+      %Response{ status_code: status_code } = resp  when status_code == expected ->
         wfn = Keyword.get(options, :response_handler, fn(r) -> r end)
-        wfn.(resp)
-      resp ->
-        {:error, resp}
+        case wfn.(resp) do
+          {:ok, result} -> result
+          {:error, error} ->
+            raise(Barracuda.Error, %{ message: "HTTP call resulted in error", data: error })
+        end
+      %Response{ status_code: status_code } = resp  when status_code != expected ->
+        raise(Barracuda.Error, %{ message: "HTTP call resulted in unexpected status code. Expected: #{expected}; Returned: #{status_code}", data: resp })
+      other ->
+        raise(Barracuda.Error, %{ message: "HTTP call resulted in error response.", data: other })
     end
   end
   
@@ -94,9 +102,9 @@ defmodule Barracuda.HttpWrapper do
   
   defp default_response_wrapper(%Response{}=resp) do
     if is_json(resp) do
-      Poison.decode!(resp.body)
+      Poison.decode(resp.body)
     else
-      resp
+      {:ok, resp}
     end
   end
   

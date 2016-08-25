@@ -7,25 +7,25 @@ defmodule Barracuda.HttpWrapper do
     do: do_request(:get, path, options, args, location)
   
   def do_get!(path, options, args, location),
-    do: do_request!(:get!, path, options, args, location)
+    do: do_request!(:get, path, options, args, location)
 
   def do_post(path, options, args, location),
     do: do_request(:post, path, options, args, location)
   
   def do_post!(path, options, args, location),
-    do: do_request!(:post!, path, options, args, location)
+    do: do_request!(:post, path, options, args, location)
 
   def do_put(path, options, args, location),
     do: do_request(:put, path, options, args, location)
 
   def do_put!(path, options, args, location),
-    do: do_request!(:put!, path, options, args, location)
+    do: do_request!(:put, path, options, args, location)
 
   def do_delete(path, options, args, location),
     do: do_request(:delete, path, options, args, location)
 
   def do_delete!(path, options, args, location),
-    do: do_request!(:delete!, path, options, args, location)
+    do: do_request!(:delete, path, options, args, location)
   
   defp do_request(method, path, options, args, location) do
     cfg = config(location)
@@ -41,7 +41,7 @@ defmodule Barracuda.HttpWrapper do
       #{inspect headers, pretty: true}
     """
     expected = Keyword.get(options, :expect, 200)
-    case apply(method, [url, body, headers, options]) do
+    case apply(Barracuda.HttpWrapper, :request, [method, url, body, headers, options]) do
       {:ok, %Response{ status_code: status_code } = resp} when status_code == expected ->
         wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
         wfn.(resp)
@@ -65,15 +65,15 @@ defmodule Barracuda.HttpWrapper do
       #{inspect headers, pretty: true}
     """
     expected = Keyword.get(options, :expect, 200)
-    case apply(method, [url, body, headers, options]) do
-      %Response{ status_code: status_code } = resp  when status_code == expected ->
-        wfn = Keyword.get(options, :response_handler, fn(r) -> r end)
+    case apply(Barracuda.HttpWrapper, :request, [method, url, body, headers, options]) do
+      {:ok, %Response{ status_code: status_code } = resp}  when status_code == expected ->
+        wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
         case wfn.(resp) do
           {:ok, result} -> result
           {:error, error} ->
             raise(Barracuda.Error, %{ message: "HTTP call resulted in error", data: error })
         end
-      %Response{ status_code: status_code } = resp  when status_code != expected ->
+      {:ok, %Response{ status_code: status_code } = resp}  when status_code != expected ->
         raise(Barracuda.Error, %{ message: "HTTP call resulted in unexpected status code. Expected: #{expected}; Returned: #{status_code}", data: resp })
       other ->
         raise(Barracuda.Error, %{ message: "HTTP call resulted in error response.", data: other })

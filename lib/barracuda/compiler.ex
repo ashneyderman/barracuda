@@ -90,10 +90,10 @@ defmodule Barracuda.Compiler do
       args = [{:\\, [line: line], [{:options, [line: line], nil}, []]}]
       doc = """
       #{ Keyword.get(options, :doc, "No documentation provided.") }
-      Returns {:ok, res_code, headers, body} or
-      {:error, msg, {options, headers, body}.
+      Returns {:ok, result} or
+      {:error, error}.
 
-      Returns just the body and raises ChargifyError if called as #{ bang }/1.
+      Returns just the body and raises Barracuda.Error if called as #{ bang }/1.
 
       [#{ to_string(verb) |> String.upcase }] #{ path }
       """

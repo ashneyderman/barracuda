@@ -1,4 +1,7 @@
 defmodule Github do
+  @moduledoc """
+  Github client.
+  """
   use Barracuda.Compiler, otp_app: :barracuda
   require Logger
   

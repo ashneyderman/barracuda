@@ -1,7 +1,13 @@
 # Barracuda
 
-Is a library that allows generation of HTTP clients in a declarative manner. For
-example,
+Barracuda is to your http client what [Plug](https://github.com/elixir-lang/plug) is to your web services.
+
+For backend processing of HTTP requests we got [Plug](https://github.com/elixir-lang/plug).
+There does not seem to be anything similar to write clients that access RESTful resources.
+We have plenty of http clients but they all work in different ways and there is no simple
+way of applying cross-cutting logic in a uniform manner to any/all of them.
+
+Barracuda is a library that offers an easy way to generate RESTful clients for a service and easily apply cross-cutting logic.
 
 ```elixir
 defmodule Github do

@@ -111,15 +111,31 @@ defmodule Barracuda.Compiler do
   end
 
   defp define_action(verb, action, path, options, config) do
-    quote do
-      def unquote(action)(args \\ nil) do
+    q0 = quote do
+      def unquote(action)(args) do
         apply(Barracuda.HttpWrapper, unquote(verb),
               [unquote(path), unquote(options), args, unquote(config)])
       end
-      def unquote(String.to_atom("#{ action }!"))(args \\ nil) do
+      def unquote(String.to_atom("#{ action }!"))(args) do
         apply(Barracuda.HttpWrapper, unquote(String.to_atom("#{ to_string(verb) }!")),
               [unquote(path), unquote(options), args, unquote(config)])
       end
+    end
+
+    if !Keyword.has_key?(options, :required) do
+      q1 = quote do
+        def unquote(action)() do
+         apply(Barracuda.HttpWrapper, unquote(verb),
+               [unquote(path), unquote(options), [], unquote(config)])
+        end
+        def unquote(String.to_atom("#{ action }!"))() do
+         apply(Barracuda.HttpWrapper, unquote(String.to_atom("#{ to_string(verb) }!")),
+               [unquote(path), unquote(options), [], unquote(config)])
+        end
+      end
+      [q0,q1]
+    else
+      q0
     end
   end
 

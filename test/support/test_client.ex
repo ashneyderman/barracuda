@@ -1,9 +1,27 @@
+defmodule Barracuda.TestClient.Hello1 do
+  def init(opts), do: opts
+  def call(call, opts) do
+    IO.puts "Barracuda.TestClient.Hello1: #{inspect call}, #{inspect opts}"
+    call
+  end
+end
+
+defmodule Barracuda.TestClient.Hello2 do
+  def init(opts), do: opts
+  def call(call, opts) do
+    IO.puts "Barracuda.TestClient.Hello2: #{inspect call}, #{inspect opts}"
+    call
+  end
+end
+
 defmodule Barracuda.TestClient do
   use Barracuda.Client
 
   do_before :hello, [test: 123, ham: "rrerere"]
+  do_before Barracuda.TestClient.Hello1, [id: 34, name: "test"]
   # --->
-  do_after :hello, [test: 123, ham: "rrerere"]
+  do_after  Barracuda.TestClient.Hello2, [id: 56, name: "test1"]
+  do_after  :hello, [test: 123, ham: "rrerere"]
   
   call :user_repos,
     path: "/users/{:username}/repos",

@@ -1,4 +1,6 @@
 defmodule Barracuda.TestClient.Hello1 do
+  @behaviour Barracuda.Client.Interceptor
+  
   def init(opts), do: opts
   def call(call, opts) do
     IO.puts "Barracuda.TestClient.Hello1: #{inspect call}, #{inspect opts}"
@@ -7,6 +9,8 @@ defmodule Barracuda.TestClient.Hello1 do
 end
 
 defmodule Barracuda.TestClient.Hello2 do
+  @behaviour Barracuda.Client.Interceptor
+  
   def init(opts), do: opts
   def call(call, opts) do
     IO.puts "Barracuda.TestClient.Hello2: #{inspect call}, #{inspect opts}"

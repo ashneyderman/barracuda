@@ -2,6 +2,7 @@ Build Status
 ========
 
 functional_chains: [![Build Status](https://semaphoreci.com/api/v1/ashneyderman/barracuda/branches/functional_chains/badge.svg)](https://semaphoreci.com/ashneyderman/barracuda)
+
 master: [![Build Status](https://semaphoreci.com/api/v1/ashneyderman/barracuda/branches/master/badge.svg)](https://semaphoreci.com/ashneyderman/barracuda)
 
 # Barracuda

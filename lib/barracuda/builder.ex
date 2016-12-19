@@ -41,10 +41,8 @@ defmodule Barracuda.Builder do
   
   defp generate_terminator_link() do
     quote do
-      def __link_0__(call, action) do
-        IO.puts "action: #{inspect action}"
-        IO.puts "  call: #{inspect call}"
-        call
+      def __link_0__(%Barracuda.Client.Call{ adapter: adapter } = call, action) do
+        apply(adapter, :call, [call, action])
       end
     end
   end

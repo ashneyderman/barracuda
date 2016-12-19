@@ -1,49 +1,79 @@
 defmodule Barracuda.Builder do
+  @moduledoc ~S"""
+  A DSL to define an interception chain.
+    
+  It provides macro to generate call chains. For example:
+  
+      defmodule GithubClient do
+        use Barracuda.Client
+  
+        interceptor Barracuda.Performance
+        interceptor Barracuda.Validator
+        interceptor Barracuda.ResultsConverter
+        
+        call :create,
+          path: "customers.json",
+          verb: :post,
+          required: [:first_name, :last_name, :email],
+          container: "customer",
+          expect: 201,
+          api: :v1
+      end
+      
+  will generate a call chain where call :create will be wrapped into a chain
+  of the specified interceptors. Each interceptor has the ability to wrap the
+  chain right below it. Upon wrapping interceptor can decide to advance the
+  chain, modify parameters of the next link in the chain or modify results of
+  the call to the next link on the chain.
+  """
+  
   require Logger
   
   defmacro __using__(opts) do
     quote do
       @builder_opts unquote(opts)
-      import Barracuda.Builder, only: [do_before: 1, do_before: 2,
-                                       do_after: 1, do_after: 2]
-
-      Module.register_attribute(__MODULE__, :before_call, accumulate: true)
-      Module.register_attribute(__MODULE__, :after_call, accumulate: true)
+      Module.register_attribute(__MODULE__, :interceptors, accumulate: true)
+      import Barracuda.Builder, only: [interceptor: 1, interceptor: 2]
+      import Barracuda.Client.Call
       @before_compile Barracuda.Builder
+    end
+  end
+  
+  defp generate_terminator_link() do
+    quote do
+      def __link_0__(call, action) do
+        IO.puts "action: #{inspect action}"
+        IO.puts "  call: #{inspect call}"
+        call
+      end
     end
   end
   
   defmacro __before_compile__(env) do
     builder_opts = Module.get_attribute(env.module, :builder_opts)
-    befores = Module.get_attribute(env.module, :before_call)
-    {bcall, before_body} = Barracuda.Builder.compile_chain(env, befores, builder_opts)
-
-    afters = Module.get_attribute(env.module, :after_call)
-    {acall, after_body} = Barracuda.Builder.compile_chain(env, afters, builder_opts)
-
+    interceptors = Module.get_attribute(env.module, :interceptors) |> Enum.reverse
+    
+    [ generate_terminator_link() |
+      Barracuda.Builder.compile_chain(env, interceptors, builder_opts) ]
+  end
+  
+  defmacro interceptor(link, opts \\ []) do
     quote do
-      def before_chain(unquote(bcall)), do: unquote(before_body)
-      def after_chain(unquote(acall)), do: unquote(after_body)
+      @interceptors { unquote(link), unquote(opts), true }
     end
   end
   
-  defmacro do_before(link, opts \\ []) do
-    quote do
-      @before_call { unquote(link), unquote(opts), true }
-    end
-  end
-
-  defmacro do_after(link, opts \\ []) do
-    quote do
-      @after_call { unquote(link), unquote(opts), true }
-    end
+  def compile_chain(_env, nil, _builder_opts), do: []
+  def compile_chain(_env, [], _builder_opts),  do: []
+  def compile_chain(env, links, builder_opts) do
+    {_, quoted} = links
+         |> Enum.map(&init_link/1)
+         |> Enum.reduce({Enum.count(links), []}, fn(link, {n, acc}) ->
+              {n-1, [quote_link(link, n, env, builder_opts) | acc]}
+            end)
+    quoted
   end
   
-  def compile_chain(env, chain, builder_opts) do
-    conn = quote do: conn
-    {conn, Enum.reduce(chain, conn, &quote_link(init_link(&1), &2, env, builder_opts))}
-  end
-
   # Initializes the options of a plug at compile time.
   defp init_link({link, opts, guards}) do
     case Atom.to_char_list(link) do
@@ -55,10 +85,10 @@ defmodule Barracuda.Builder do
   defp init_module_link(link, opts, guards) do
     initialized_opts = link.init(opts)
 
-    if function_exported?(link, :call, 2) do
+    if function_exported?(link, :link, 2) do
       {:module, link, initialized_opts, guards}
     else
-      raise ArgumentError, message: "#{inspect link} link must implement call/2"
+      raise ArgumentError, message: "#{inspect link} link must implement link/2"
     end
   end
 
@@ -66,76 +96,28 @@ defmodule Barracuda.Builder do
     {:function, link, opts, guards}
   end
 
-  defp quote_link({link_type, link, opts, guards}, acc, env, builder_opts) do
-    call = quote_link_call(link_type, link, opts)
-
-    error_message = case link_type do
-      :module   -> "expected #{inspect link}.call/2 to return a Barracuda.Client.Call"
-      :function -> "expected #{link}/2 to return a Barracuda.Client.Call"
-    end <> ", all plugs must receive a call (Barracuda.Client.Call) and return a call"
-
-    {fun, meta, [arg, [do: clauses]]} =
-      quote do
-        case unquote(compile_guards(call, guards)) do
-          %Barracuda.Client.Call{halted: true} = call ->
-            unquote(log_halt(link_type, link, env, builder_opts))
-            call
-          %Barracuda.Client.Call{} = call ->
-            unquote(acc)
-          _ ->
-            raise unquote(error_message)
+  defp quote_link({link_type, link, _opts, _guards}, idx, _env, _builder_opts) do
+    pname = String.to_atom("__link_#{idx-1}__")
+    fname = String.to_atom("__link_#{idx}__")
+    case link_type do
+      :module ->
+        quote do
+          def unquote(fname)(call, action) do
+            unquote(link).link(
+              fn(params) ->
+                unquote(pname)(params, action)
+              end, call)
+          end
         end
-      end
-
-    generated? = :erlang.system_info(:otp_release) >= '19'
-
-    clauses =
-      Enum.map(clauses, fn {:->, meta, args} ->
-        if generated? do
-          {:->, [generated: true] ++ meta, args}
-        else
-          {:->, Keyword.put(meta, :line, -1), args}
+      :function ->
+        quote do
+          def unquote(fname)(call, action) do
+            unquote(link)(
+              fn(params) ->
+                unquote(pname)(params, action)
+              end, call)
+          end
         end
-      end)
-
-    {fun, meta, [arg, [do: clauses]]}
-  end
-
-  defp quote_link_call(:function, link, opts) do
-    quote do: unquote(link)(conn, unquote(Macro.escape(opts)))
-  end
-
-  defp quote_link_call(:module, link, opts) do
-    quote do: unquote(link).call(conn, unquote(Macro.escape(opts)))
-  end
-
-  defp compile_guards(call, true) do
-    call
-  end
-
-  defp compile_guards(call, guards) do
-    quote do
-      case true do
-        true when unquote(guards) -> unquote(call)
-        true -> conn
-      end
-    end
-  end
-
-  defp log_halt(link_type, link, env, builder_opts) do
-    if level = builder_opts[:log_on_halt] do
-      message = case link_type do
-        :module   -> "#{inspect env.module} halted in #{inspect link}.call/2"
-        :function -> "#{inspect env.module} halted in #{inspect link}/2"
-      end
-
-      quote do
-        require Logger
-        # Matching, to make Dialyzer happy on code executing Barracuda.Builder.compile_chain/3
-        _ = Logger.unquote(level)(unquote(message))
-      end
-    else
-      nil
     end
   end
   

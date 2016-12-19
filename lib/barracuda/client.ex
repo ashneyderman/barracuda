@@ -1,28 +1,54 @@
 defmodule Barracuda.Client.Call do
-  @type state :: :unset | :set | :sent
+  @type assigns :: %{atom => any}
   
   @type t :: %__MODULE__{
-    verb:    atom,
-    path:    String.t,
+    adapter: atom,
     options: Keyword.t,
     args:    Keyword.t,
-    config:  Keyword.t,
-    state:   state,
-    halted:  boolean
+    assigns: assigns
   }
   
-  defstruct verb: nil,
-    path:    nil,
-    options: [],
-    args:    [],
-    config:  [],
-    state:   :unset,
-    halted:  false
+  defstruct adapter: nil,
+            options: [],
+            args:    [],
+            assigns: %{}
+      
+  @doc """
+  Assigns a value to a key in the connection
+
+  ## Examples
+
+  iex> conn.assigns[:hello]
+  nil
+  iex> conn = assign(conn, :hello, :world)
+  iex> conn.assigns[:hello]
+  :world
+  """
+  @spec assign(t, atom, term) :: t
+  def assign(%Barracuda.Client.Call{assigns: assigns} = call, key, value) when is_atom(key) do
+    %{call | assigns: Map.put(assigns, key, value)}
+  end
 end
 
 defmodule Barracuda.Client.Interceptor do
+  @moduledoc ~S"""
+  Interface that all interceptors have to implement to be plugged into an
+  interception chain as links.
+  """
+  
+  @doc ~S"""
+  Optional callback that an interceptor can specify to process interceptor
+  options at compile time.
+  """
   @callback init(Keyword.t) :: Keyword.t
-  @callback call(Barracuda.Client.Call.t, Keyword.t) :: Barracuda.Client.Call.t
+  
+  @doc ~S"""
+  Required callback that gets invoked
+  """
+  @callback link(fun, Barracuda.Client.Call.t) :: Barracuda.Client.Call.t
+  
+  
+  @optional_callbacks init: 1
 end
 
 defmodule Barracuda.Client do
@@ -34,11 +60,9 @@ defmodule Barracuda.Client do
       defmodule GithubClient do
         use Barracuda.Client
   
-        do_before Barracuda.Performance
-        do_before Barracuda.Validator
-        
-        do_after Barracuda.ResultsConverter
-        do_after Barracuda.Performance
+        interceptor Barracuda.Performance
+        interceptor Barracuda.Validator
+        interceptor Barracuda.ResultsConverter
         
         call :create,
           path: "customers.json",
@@ -48,12 +72,6 @@ defmodule Barracuda.Client do
           expect: 201,
           api: :v1
       end
-
-  ## Options
-  
-  When used, the following options are accepted by `Plug.Router`:
-  
-    * `:log_on_halt` - accepts the level to log whenever the request is halted
   """
 
   defmacro __using__(opts) do
@@ -67,14 +85,17 @@ defmodule Barracuda.Client do
       
       Module.register_attribute __MODULE__, :calls, accumulate: true
       import unquote(__MODULE__), only: [call: 2]
+      import Barracuda.Builder, only: [interceptor: 1, interceptor: 2]
+      import Barracuda.Client.Call
       @before_compile unquote(__MODULE__)
     end
   end
   
   defmacro __before_compile__(env) do
     calls = Module.get_attribute(env.module, :calls)
-    for {action, _options} <- calls do
-      define_action(action)
+    interceptors = Module.get_attribute(env.module, :interceptors)
+    for {action, options} <- calls do
+      define_action(action, options, Enum.count(interceptors))
     end
   end
   
@@ -84,13 +105,11 @@ defmodule Barracuda.Client do
     end
   end
   
-  defp define_action(name) do
+  defp define_action(name, _options, chain_size) do
+    link_name = :"__link_#{chain_size}__"
     quote do
       def unquote(name)(args) do
-        %Barracuda.Client.Call{args: args}
-          |> before_chain
-          |> do_call
-          |> after_chain
+        unquote(link_name)(%Barracuda.Client.Call{ args: args }, unquote(name))
       end
     end
   end

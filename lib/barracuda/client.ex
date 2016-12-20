@@ -71,6 +71,9 @@ defmodule Barracuda.Client do
           container: "customer",
           expect: 201,
           api: :v1
+          
+        call :delete, Barracuda.RPC.Adapter,
+          required: [:first_name, :last_name, :email]
       end
   """
 

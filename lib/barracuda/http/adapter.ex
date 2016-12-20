@@ -1,7 +1,7 @@
 defmodule Barracuda.Http.Adapter do
   require Logger
   use HTTPoison.Base
-  alias HTTPoison.Response
+  #alias HTTPoison.Response
   
   def call(%Barracuda.Client.Call{}=call, action) do
     IO.puts "Http.Adapter.action: #{inspect action}"

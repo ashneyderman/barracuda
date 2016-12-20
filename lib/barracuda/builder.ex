@@ -42,16 +42,12 @@ defmodule Barracuda.Builder do
   defp generate_terminator_link(opts) do
     adapter = opts |> Keyword.get(:adapter)
     quote do
-      def __link_0__(%Barracuda.Client.Call{adapter: adapter_overwrite} = call, action) do
-        if adapter_overwrite do
-          apply(adapter_overwrite, :call, [call, action])
+      def __link_0__(%Barracuda.Client.Call{adapter: oadapter} = call, action) do
+        z = if oadapter, do: oadapter, else: unquote(adapter)
+        if z do
+          apply(z, :call, [call, action])
         else
-          z = unquote(adapter)
-          if z do
-            apply(z, :call, [call, action])
-          else
-            raise RuntimeError, message: "adapter was not specified at compile time and is missing at runtime."
-          end
+          raise RuntimeError, message: "adapter was not specified at compile time and is missing at runtime."
         end
       end
     end

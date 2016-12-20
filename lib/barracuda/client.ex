@@ -76,11 +76,6 @@ defmodule Barracuda.Client do
 
   defmacro __using__(opts) do
     quote do
-      def do_call(%Barracuda.Client.Call{} = call) do
-        IO.puts "doing the actual call ..."
-        call
-      end
-      
       use Barracuda.Builder, unquote(opts)
       
       Module.register_attribute __MODULE__, :calls, accumulate: true
@@ -105,12 +100,35 @@ defmodule Barracuda.Client do
     end
   end
   
-  defp define_action(name, _options, chain_size) do
+  defp define_action(name, options, chain_size) do
     link_name = :"__link_#{chain_size}__"
-    quote do
+    name! = :"#{name}!"
+
+    q0 = quote do
       def unquote(name)(args) do
-        unquote(link_name)(%Barracuda.Client.Call{ args: args }, unquote(name))
+        unquote(link_name)(%Barracuda.Client.Call{ args: args,
+                                                   options: unquote(options) }, unquote(name))
       end
+      def unquote(name!)(args) do
+        unquote(link_name)(%Barracuda.Client.Call{ args: args,
+                                                   options: unquote(options) }, unquote(name!))
+      end
+    end
+    
+    if !Keyword.has_key?(options, :required) do
+      q1 = quote do
+        def unquote(name)() do
+          unquote(link_name)(%Barracuda.Client.Call{ args: [],
+                                                     options: unquote(options) }, unquote(name))
+        end
+        def unquote(name!)() do
+          unquote(link_name)(%Barracuda.Client.Call{ args: [],
+                                                     options: unquote(options) }, unquote(name!))
+        end
+      end
+      [q0,q1]
+    else
+      q0
     end
   end
 

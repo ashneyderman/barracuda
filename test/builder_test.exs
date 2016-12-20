@@ -1,6 +1,5 @@
 defmodule Barracuda.BuilderTest.Interceptor do
   @behaviour Barracuda.Client.Interceptor
-
   import Barracuda.Client.Call
 
   def init(opts), do: opts
@@ -17,7 +16,7 @@ end
 defmodule Barracuda.BuilderTest.Adapter do
   import Barracuda.Client.Call
   
-  def call(%Barracuda.Client.Call{assigns: current}=params, action) do
+  def call(%Barracuda.Client.Call{assigns: current}=params, _action) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
   end
@@ -25,8 +24,19 @@ defmodule Barracuda.BuilderTest.Adapter do
   defp record_chain(current), do: current ++ ["Barracuda.BuilderTest.Adapter"]
 end
 
+defmodule Barracuda.BuilderTest.Adapter1 do
+  import Barracuda.Client.Call
+  
+  def call(%Barracuda.Client.Call{assigns: current}=params, _action) do
+    params
+    |> assign(:chain, record_chain(Map.get(current, :chain, [])))
+  end
+  
+  defp record_chain(current), do: current ++ ["Barracuda.BuilderTest.Adapter1"]
+end
+
 defmodule Barracuda.BuilderTest.Intercepted do
-  use Barracuda.Builder
+  use Barracuda.Builder, adapter: Barracuda.BuilderTest.Adapter
 
   interceptor Barracuda.BuilderTest.Interceptor
   interceptor :hello
@@ -56,8 +66,13 @@ defmodule Barracuda.BuilderTest do
   end
 
   test "chained calls" do
-    %Call{assigns: %{chain: chain}} = Intercepted.__link_2__(%Call{adapter: Barracuda.BuilderTest.Adapter}, :do_something)
+    %Call{assigns: %{chain: chain}} = Intercepted.__link_2__(%Call{}, :do_something)
     assert chain == ["Barracuda.BuilderTest.Interceptor", "hello", "Barracuda.BuilderTest.Adapter"]
+  end
+  
+  test "chained calls with adapter overwrite" do
+    %Call{assigns: %{chain: chain}} = Intercepted.__link_2__(%Call{adapter: Barracuda.BuilderTest.Adapter1}, :do_something)
+    assert chain == ["Barracuda.BuilderTest.Interceptor", "hello", "Barracuda.BuilderTest.Adapter1"]
   end
 
 end

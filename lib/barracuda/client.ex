@@ -58,7 +58,7 @@ defmodule Barracuda.Client do
   It provides a set of macros to generate call chains. For example:
   
       defmodule GithubClient do
-        use Barracuda.Client
+        use Barracuda.Client, adapter: Barracuda.Http.Adapter
   
         interceptor Barracuda.Performance
         interceptor Barracuda.Validator
@@ -79,7 +79,7 @@ defmodule Barracuda.Client do
       use Barracuda.Builder, unquote(opts)
       
       Module.register_attribute __MODULE__, :calls, accumulate: true
-      import unquote(__MODULE__), only: [call: 2]
+      import unquote(__MODULE__), only: [call: 2, call: 3]
       import Barracuda.Builder, only: [interceptor: 1, interceptor: 2]
       import Barracuda.Client.Call
       @before_compile unquote(__MODULE__)
@@ -89,8 +89,13 @@ defmodule Barracuda.Client do
   defmacro __before_compile__(env) do
     calls = Module.get_attribute(env.module, :calls)
     interceptors = Module.get_attribute(env.module, :interceptors)
-    for {action, options} <- calls do
-      define_action(action, options, Enum.count(interceptors))
+    for call <- calls do
+      case call do
+        {action, options} ->
+          define_action(action, options, Enum.count(interceptors))
+        {action, adapter, options} ->
+          define_action(action, adapter, options, Enum.count(interceptors))
+      end
     end
   end
   
@@ -100,6 +105,48 @@ defmodule Barracuda.Client do
     end
   end
   
+  defmacro call(name, adapter, options) do
+    quote bind_quoted: [name: name, adapter: adapter, options: options] do
+      @calls {name, adapter, options}
+    end
+  end
+  
+  defp define_action(name, adapter, options, chain_size) do
+    link_name = :"__link_#{chain_size}__"
+    name! = :"#{name}!"
+
+    q0 = quote do
+      def unquote(name)(args) do
+        unquote(link_name)(%Barracuda.Client.Call{ args: args,
+                                                   adapter: unquote(adapter),
+                                                   options: unquote(options) }, unquote(name))
+      end
+      def unquote(name!)(args) do
+        unquote(link_name)(%Barracuda.Client.Call{ args: args,
+                                                   adapter: unquote(adapter),
+                                                   options: unquote(options) }, unquote(name!))
+      end
+    end
+    
+    if !Keyword.has_key?(options, :required) do
+      q1 = quote do
+        def unquote(name)() do
+          unquote(link_name)(%Barracuda.Client.Call{ args: [],
+                                                     adapter: unquote(adapter),
+                                                     options: unquote(options) }, unquote(name))
+        end
+        def unquote(name!)() do
+          unquote(link_name)(%Barracuda.Client.Call{ args: [],
+                                                     adapter: unquote(adapter),
+                                                     options: unquote(options) }, unquote(name!))
+        end
+      end
+      [q0,q1]
+    else
+      q0
+    end
+  end
+
   defp define_action(name, options, chain_size) do
     link_name = :"__link_#{chain_size}__"
     name! = :"#{name}!"

@@ -49,7 +49,8 @@ defmodule Barracuda.TestClient.Adapter1 do
 end
 
 defmodule Barracuda.TestClient do
-  use Barracuda.Client, adapter: Barracuda.TestClient.Adapter
+  use Barracuda.Client, adapter: Barracuda.TestClient.Adapter,
+                        otp_app: :barracuda
   import Barracuda.Client.Call
 
   interceptor :hello

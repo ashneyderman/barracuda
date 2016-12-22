@@ -8,10 +8,12 @@ defmodule Barracuda.Client.Call do
     assigns: assigns
   }
   
-  defstruct adapter: nil,
-            options: [],
-            args:    [],
-            assigns: %{}
+  defstruct adapter:  nil,
+            options:  [],
+            args:     [],
+            config:   nil,
+            response: nil,
+            assigns:  %{}
       
   @doc """
   Assigns a value to a key in the connection
@@ -58,7 +60,8 @@ defmodule Barracuda.Client do
   It provides a set of macros to generate call chains. For example:
   
       defmodule GithubClient do
-        use Barracuda.Client, adapter: Barracuda.Http.Adapter
+        use Barracuda.Client, adapter: Barracuda.Http.Adapter,
+                              otp_app: :app
   
         interceptor Barracuda.Performance
         interceptor Barracuda.Validator
@@ -81,6 +84,9 @@ defmodule Barracuda.Client do
     quote do
       use Barracuda.Builder, unquote(opts)
       
+      Module.register_attribute __MODULE__, :otp_app, []
+      @otp_app unquote(opts)[:otp_app] || raise "client expects :otp_app to be given"
+      
       Module.register_attribute __MODULE__, :calls, accumulate: true
       import unquote(__MODULE__), only: [call: 2, call: 3]
       import Barracuda.Builder, only: [interceptor: 1, interceptor: 2]
@@ -95,9 +101,9 @@ defmodule Barracuda.Client do
     for call <- calls do
       case call do
         {action, options} ->
-          define_action(action, options, Enum.count(interceptors))
+          define_action(action, options, Enum.count(interceptors), {Module.get_attribute(env.module, :otp_app), env.module})
         {action, adapter, options} ->
-          define_action(action, adapter, options, Enum.count(interceptors))
+          define_action(action, adapter, options, Enum.count(interceptors), {Module.get_attribute(env.module, :otp_app), env.module})
       end
     end
   end
@@ -114,7 +120,7 @@ defmodule Barracuda.Client do
     end
   end
   
-  defp define_action(name, adapter, options, chain_size) do
+  defp define_action(name, adapter, options, chain_size, config) do
     link_name = :"__link_#{chain_size}__"
     name! = :"#{name}!"
 
@@ -122,12 +128,14 @@ defmodule Barracuda.Client do
       def unquote(name)(args) do
         unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                    adapter: unquote(adapter),
-                                                   options: unquote(options) }, unquote(name))
+                                                   options: unquote(options),
+                                                   config: unquote(config) }, unquote(name))
       end
       def unquote(name!)(args) do
         unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                    adapter: unquote(adapter),
-                                                   options: unquote(options) }, unquote(name!))
+                                                   options: unquote(options),
+                                                   config: unquote(config) }, unquote(name!))
       end
     end
     
@@ -136,12 +144,14 @@ defmodule Barracuda.Client do
         def unquote(name)() do
           unquote(link_name)(%Barracuda.Client.Call{ args: [],
                                                      adapter: unquote(adapter),
-                                                     options: unquote(options) }, unquote(name))
+                                                     options: unquote(options),
+                                                     config: unquote(config) }, unquote(name))
         end
         def unquote(name!)() do
           unquote(link_name)(%Barracuda.Client.Call{ args: [],
                                                      adapter: unquote(adapter),
-                                                     options: unquote(options) }, unquote(name!))
+                                                     options: unquote(options),
+                                                     config: unquote(config) }, unquote(name!))
         end
       end
       [q0,q1]
@@ -150,18 +160,20 @@ defmodule Barracuda.Client do
     end
   end
 
-  defp define_action(name, options, chain_size) do
+  defp define_action(name, options, chain_size, config) do
     link_name = :"__link_#{chain_size}__"
     name! = :"#{name}!"
 
     q0 = quote do
       def unquote(name)(args) do
         unquote(link_name)(%Barracuda.Client.Call{ args: args,
-                                                   options: unquote(options) }, unquote(name))
+                                                   options: unquote(options),
+                                                   config: unquote(config) }, unquote(name))
       end
       def unquote(name!)(args) do
         unquote(link_name)(%Barracuda.Client.Call{ args: args,
-                                                   options: unquote(options) }, unquote(name!))
+                                                   options: unquote(options),
+                                                   config: unquote(config) }, unquote(name!))
       end
     end
     
@@ -169,11 +181,13 @@ defmodule Barracuda.Client do
       q1 = quote do
         def unquote(name)() do
           unquote(link_name)(%Barracuda.Client.Call{ args: [],
-                                                     options: unquote(options) }, unquote(name))
+                                                     options: unquote(options),
+                                                     config: unquote(config) }, unquote(name))
         end
         def unquote(name!)() do
           unquote(link_name)(%Barracuda.Client.Call{ args: [],
-                                                     options: unquote(options) }, unquote(name!))
+                                                     options: unquote(options),
+                                                     config: unquote(config) }, unquote(name!))
         end
       end
       [q0,q1]

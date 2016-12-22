@@ -2,7 +2,8 @@ defmodule Github do
   @moduledoc """
   Github client.
   """
-  use Barracuda.Compiler, otp_app: :barracuda
+  use Barracuda.Client, adapter: Barracuda.Http.Adapter,
+                        otp_app: :barracuda
   require Logger
   
   call :user_repos,

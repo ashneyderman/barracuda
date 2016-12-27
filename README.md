@@ -16,7 +16,11 @@ Barracuda is a library that offers an easy way to generate RESTful clients for a
 
 ```elixir
 defmodule Github do
-  use Barracuda.Compiler, otp_app: :barracuda
+  @moduledoc """
+  Github client.
+  """
+  use Barracuda.Client, adapter: Barracuda.Http.Adapter,
+                        otp_app: :barracuda
   require Logger
   
   call :user_repos,
@@ -24,6 +28,9 @@ defmodule Github do
     verb: :get,
     required: [:username],
     required_headers: ["accept"],
+    doc: ~S"""
+    Lists all repos for the user
+    """,
     expect: 200
 
 end
@@ -51,7 +58,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
     ```elixir
     def deps do
-      [{:barracuda, "~> 0.3.0"}]
+      [{:barracuda, "~> 0.4.0"}]
     end
     ```
 

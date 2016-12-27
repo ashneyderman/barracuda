@@ -3,7 +3,7 @@ defmodule Barracuda.Mixfile do
 
   def project do
     [app: :barracuda,
-     version: "0.4.0-dev",
+     version: "0.4.0",
      elixir: "~> 1.3",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,

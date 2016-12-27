@@ -29,6 +29,8 @@ end
 defmodule Barracuda.TestClient.Adapter do
   import Barracuda.Client.Call
 
+  def docs(_, _), do: "Adapter: No docs."
+
   def call(%Barracuda.Client.Call{assigns: current}=params, action) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, []), action))
@@ -39,6 +41,8 @@ end
 
 defmodule Barracuda.TestClient.Adapter1 do
   import Barracuda.Client.Call
+
+  def docs(_, _), do: "Adapter1: No docs."
 
   def call(%Barracuda.Client.Call{assigns: current}=params, action) do
     params
@@ -62,12 +66,18 @@ defmodule Barracuda.TestClient do
     verb: :get,
     required: [:username],
     required_headers: ["accept"],
+    doc: ~S"""
+    Lists all repos for the user
+    """,
     expect: 200
-    
+  
   call :no_required, Barracuda.TestClient.Adapter1,
-    path: "/users/{:username}/repos",
+    path: "/users/ashneyderman/repos",
     verb: :get,
     required_headers: ["accept"],
+    doc: ~S"""
+    Lists all repos for ashneyderman
+    """,
     expect: 200
 
   defp record_chain(current), do: current ++ ["hello"]

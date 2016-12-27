@@ -3,6 +3,16 @@ defmodule Barracuda.Http.Adapter do
   use HTTPoison.Base
   alias HTTPoison.Response
   
+  def docs(options, _action) do
+    docs = Keyword.get(options, :doc, "No documentation provided.")
+    verb = Keyword.get(options, :verb, :"GET")
+    path = Keyword.get(options, :path, "Unknown!")
+    """
+    #{ docs }
+    [#{ to_string(verb) |> String.upcase }] #{ path }
+    """
+  end
+  
   def call(%Barracuda.Client.Call{ options: options, args: args, config: config } = call, action) do
     path = Keyword.fetch!(options, :path)
     response = apply(__MODULE__, local_method(options, action), [path, options, args, config])

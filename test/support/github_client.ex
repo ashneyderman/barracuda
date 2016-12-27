@@ -11,6 +11,9 @@ defmodule Github do
     verb: :get,
     required: [:username],
     required_headers: ["accept"],
+    doc: ~S"""
+    Lists all repos for the user
+    """,
     expect: 200
 
 end

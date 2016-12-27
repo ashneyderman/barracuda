@@ -86,6 +86,8 @@ defmodule Barracuda.Client do
       
       Module.register_attribute __MODULE__, :otp_app, []
       @otp_app unquote(opts)[:otp_app] || raise "client expects :otp_app to be given"
+      Module.register_attribute __MODULE__, :adapter, []
+      @adapter unquote(opts)[:adapter]
       
       Module.register_attribute __MODULE__, :calls, accumulate: true
       import unquote(__MODULE__), only: [call: 2, call: 3]
@@ -98,102 +100,73 @@ defmodule Barracuda.Client do
   defmacro __before_compile__(env) do
     calls = Module.get_attribute(env.module, :calls)
     interceptors = Module.get_attribute(env.module, :interceptors)
+    otp_app = Module.get_attribute(env.module, :otp_app)
+    global_adapter = Module.get_attribute(env.module, :adapter)
     for call <- calls do
       case call do
-        {action, options} ->
-          define_action(action, options, Enum.count(interceptors), {Module.get_attribute(env.module, :otp_app), env.module})
-        {action, adapter, options} ->
-          define_action(action, adapter, options, Enum.count(interceptors), {Module.get_attribute(env.module, :otp_app), env.module})
+        {action, options, caller_ctx} ->
+          define_action(action, global_adapter, options, Enum.count(interceptors), {otp_app, env.module}, caller_ctx)
+        {action, adapter, options, caller_ctx} ->
+          define_action(action, adapter, options, Enum.count(interceptors), {otp_app, env.module}, caller_ctx)
       end
     end
   end
   
   defmacro call(name, options) do
-    quote bind_quoted: [name: name, options: options] do
-      @calls {name, options}
+    quote bind_quoted: [name: name, options: options, line: __CALLER__.line] do
+      @calls {name, options, line}
     end
   end
   
   defmacro call(name, adapter, options) do
-    quote bind_quoted: [name: name, adapter: adapter, options: options] do
-      @calls {name, adapter, options}
+    quote bind_quoted: [name: name, adapter: adapter, options: options, line: __CALLER__.line] do
+      @calls {name, adapter, options, line}
     end
   end
   
-  defp define_action(name, adapter, options, chain_size, config) do
+  defp define_action(name, adapter, options, chain_size, {_, module} = config, line) do
     link_name = :"__link_#{chain_size}__"
     name! = :"#{name}!"
-
-    q0 = quote do
-      def unquote(name)(args) do
-        unquote(link_name)(%Barracuda.Client.Call{ args: args,
-                                                   adapter: unquote(adapter),
-                                                   options: unquote(options),
-                                                   config: unquote(config) }, unquote(name))
-      end
-      def unquote(name!)(args) do
-        unquote(link_name)(%Barracuda.Client.Call{ args: args,
-                                                   adapter: unquote(adapter),
-                                                   options: unquote(options),
-                                                   config: unquote(config) }, unquote(name!))
-      end
-    end
     
-    if !Keyword.has_key?(options, :required) do
-      q1 = quote do
-        def unquote(name)() do
-          unquote(link_name)(%Barracuda.Client.Call{ args: [],
+    has_required = Keyword.has_key?(options, :required)
+    define_docs(module, name,  adapter, options, 1, line)
+    define_docs(module, name!, adapter, options, 1, line)
+
+    quote do
+      if unquote(has_required) do
+        def unquote(name)(args) do
+          unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                      adapter: unquote(adapter),
                                                      options: unquote(options),
                                                      config: unquote(config) }, unquote(name))
         end
-        def unquote(name!)() do
-          unquote(link_name)(%Barracuda.Client.Call{ args: [],
+        def unquote(name!)(args) do
+          unquote(link_name)(%Barracuda.Client.Call{ args: args,
+                                                     adapter: unquote(adapter),
+                                                     options: unquote(options),
+                                                     config: unquote(config) }, unquote(name!))
+        end
+      else
+        def unquote(name)(args \\ []) do
+          unquote(link_name)(%Barracuda.Client.Call{ args: args,
+                                                     adapter: unquote(adapter),
+                                                     options: unquote(options),
+                                                     config: unquote(config) }, unquote(name))
+        end
+        def unquote(name!)(args \\ []) do
+          unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                      adapter: unquote(adapter),
                                                      options: unquote(options),
                                                      config: unquote(config) }, unquote(name!))
         end
       end
-      [q0,q1]
-    else
-      q0
     end
   end
 
-  defp define_action(name, options, chain_size, config) do
-    link_name = :"__link_#{chain_size}__"
-    name! = :"#{name}!"
-
-    q0 = quote do
-      def unquote(name)(args) do
-        unquote(link_name)(%Barracuda.Client.Call{ args: args,
-                                                   options: unquote(options),
-                                                   config: unquote(config) }, unquote(name))
-      end
-      def unquote(name!)(args) do
-        unquote(link_name)(%Barracuda.Client.Call{ args: args,
-                                                   options: unquote(options),
-                                                   config: unquote(config) }, unquote(name!))
-      end
-    end
-    
-    if !Keyword.has_key?(options, :required) do
-      q1 = quote do
-        def unquote(name)() do
-          unquote(link_name)(%Barracuda.Client.Call{ args: [],
-                                                     options: unquote(options),
-                                                     config: unquote(config) }, unquote(name))
-        end
-        def unquote(name!)() do
-          unquote(link_name)(%Barracuda.Client.Call{ args: [],
-                                                     options: unquote(options),
-                                                     config: unquote(config) }, unquote(name!))
-        end
-      end
-      [q0,q1]
-    else
-      q0
-    end
+  defp define_docs(module, name, adapter, options, arity, line) do
+    docs = apply(adapter, :docs, [options, name])
+    args = [{:\\, [line: line], [{:options, [line: line], nil}, []]}]
+    Module.add_doc(module, line, :def, {name, arity}, args, docs)
   end
 
 end

@@ -13,7 +13,8 @@ defmodule Barracuda.Client.Call do
             args:     [],
             config:   nil,
             response: nil,
-            assigns:  %{}
+            assigns:  %{},
+            action:   nil
       
   @doc """
   Assigns a value to a key in the connection
@@ -48,7 +49,6 @@ defmodule Barracuda.Client.Interceptor do
   Required callback that gets invoked
   """
   @callback link(fun, Barracuda.Client.Call.t) :: Barracuda.Client.Call.t
-  
   
   @optional_callbacks init: 1
 end
@@ -138,26 +138,30 @@ defmodule Barracuda.Client do
           unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                      adapter: unquote(adapter),
                                                      options: unquote(options),
-                                                     config: unquote(config) }, unquote(name))
+                                                     config: unquote(config),
+                                                     action: unquote(name) }, unquote(name))
         end
         def unquote(name!)(args) do
           unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                      adapter: unquote(adapter),
                                                      options: unquote(options),
-                                                     config: unquote(config) }, unquote(name!))
+                                                     config: unquote(config),
+                                                     action: unquote(name)  }, unquote(name!))
         end
       else
         def unquote(name)(args \\ []) do
           unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                      adapter: unquote(adapter),
                                                      options: unquote(options),
-                                                     config: unquote(config) }, unquote(name))
+                                                     config: unquote(config),
+                                                     action: unquote(name)  }, unquote(name))
         end
         def unquote(name!)(args \\ []) do
           unquote(link_name)(%Barracuda.Client.Call{ args: args,
                                                      adapter: unquote(adapter),
                                                      options: unquote(options),
-                                                     config: unquote(config) }, unquote(name!))
+                                                     config: unquote(config),
+                                                     action: unquote(name)  }, unquote(name!))
         end
       end
     end

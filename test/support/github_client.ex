@@ -4,7 +4,8 @@ defmodule Github do
   """
   use Barracuda.Client, adapter: Barracuda.Http.Adapter,
                         otp_app: :barracuda
-  require Logger
+
+  interceptor Barracuda.Timer
   
   call :user_repos,
     path: "/users/{:username}/repos",

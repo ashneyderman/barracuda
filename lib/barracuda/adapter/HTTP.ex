@@ -1,4 +1,4 @@
-defmodule Barracuda.Http.Adapter do
+defmodule Barracuda.Adapter.HTTP do
   require Logger
   use HTTPoison.Base
   alias HTTPoison.Response
@@ -13,10 +13,10 @@ defmodule Barracuda.Http.Adapter do
     """
   end
   
-  def call(%Barracuda.Client.Call{ options: options, args: args, config: config } = call, action) do
+  def call(%Barracuda.Call{ options: options, args: args, config: config } = call, action) do
     path = Keyword.fetch!(options, :path)
     response = apply(__MODULE__, local_method(options, action), [path, options, args, config])
-    %Barracuda.Client.Call{ call | response: response }
+    %Barracuda.Call{ call | response: response }
   end
   
   defp local_method(options, action) do

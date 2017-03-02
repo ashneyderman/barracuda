@@ -1,7 +1,7 @@
 defmodule Barracuda.ClientTest do
   use ExUnit.Case, async: true
   alias Barracuda.TestClient
-  alias Barracuda.Client.Call
+  alias Barracuda.Call
 
   test "exports user_repos" do
     exports = TestClient.module_info(:exports)

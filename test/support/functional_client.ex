@@ -1,5 +1,5 @@
 defmodule Functional.Client.Timer do
-  @behaviour Barracuda.Client.Interceptor
+  @behaviour Barracuda.Interceptor
   
   def link(next, params) do
     IO.puts "timer interceptor ..."
@@ -65,7 +65,7 @@ defmodule Functional.Client do
                 do_user_repos(nil,params0)
               end, params1)
       end,
-      %Barracuda.Client.Call{ args: args })
+      %Barracuda.Call{ args: args })
   end
   
   def __f0(params, action) do

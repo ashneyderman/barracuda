@@ -1,9 +1,9 @@
 defmodule Barracuda.TestClient.Hello1 do
-  @behaviour Barracuda.Client.Interceptor
-  import Barracuda.Client.Call
+  @behaviour Barracuda.Interceptor
+  import Barracuda.Call
 
   def init(opts), do: opts
-  def link(next, %Barracuda.Client.Call{assigns: current} = params) do
+  def link(next, %Barracuda.Call{assigns: current} = params) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()
@@ -13,11 +13,11 @@ defmodule Barracuda.TestClient.Hello1 do
 end
 
 defmodule Barracuda.TestClient.Hello2 do
-  @behaviour Barracuda.Client.Interceptor
-  import Barracuda.Client.Call
+  @behaviour Barracuda.Interceptor
+  import Barracuda.Call
 
   def init(opts), do: opts
-  def link(next, %Barracuda.Client.Call{assigns: current} = params) do
+  def link(next, %Barracuda.Call{assigns: current} = params) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()
@@ -27,11 +27,11 @@ defmodule Barracuda.TestClient.Hello2 do
 end
 
 defmodule Barracuda.TestClient.Adapter do
-  import Barracuda.Client.Call
+  import Barracuda.Call
 
   def docs(_, _), do: "Adapter: No docs."
 
-  def call(%Barracuda.Client.Call{assigns: current}=params, action) do
+  def call(%Barracuda.Call{assigns: current}=params, action) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, []), action))
   end
@@ -40,11 +40,11 @@ defmodule Barracuda.TestClient.Adapter do
 end
 
 defmodule Barracuda.TestClient.Adapter1 do
-  import Barracuda.Client.Call
+  import Barracuda.Call
 
   def docs(_, _), do: "Adapter1: No docs."
 
-  def call(%Barracuda.Client.Call{assigns: current}=params, action) do
+  def call(%Barracuda.Call{assigns: current}=params, action) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, []), action))
   end
@@ -55,7 +55,7 @@ end
 defmodule Barracuda.TestClient do
   use Barracuda.Client, adapter: Barracuda.TestClient.Adapter,
                         otp_app: :barracuda
-  import Barracuda.Client.Call
+  import Barracuda.Call
 
   interceptor :hello
   interceptor Barracuda.TestClient.Hello1
@@ -82,7 +82,7 @@ defmodule Barracuda.TestClient do
 
   defp record_chain(current), do: current ++ ["hello"]
 
-  def hello(next, %Barracuda.Client.Call{assigns: current} = params) do
+  def hello(next, %Barracuda.Call{assigns: current} = params) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()

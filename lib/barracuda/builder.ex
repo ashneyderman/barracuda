@@ -34,7 +34,7 @@ defmodule Barracuda.Builder do
       @builder_opts unquote(opts)
       Module.register_attribute(__MODULE__, :interceptors, accumulate: true)
       import Barracuda.Builder, only: [interceptor: 1, interceptor: 2]
-      import Barracuda.Client.Call
+      import Barracuda.Call
       @before_compile Barracuda.Builder
     end
   end
@@ -42,7 +42,7 @@ defmodule Barracuda.Builder do
   defp generate_terminator_link(opts) do
     adapter = opts |> Keyword.get(:adapter)
     quote do
-      def __link_0__(%Barracuda.Client.Call{adapter: oadapter} = call, action) do
+      def __link_0__(%Barracuda.Call{adapter: oadapter} = call, action) do
         z = if oadapter, do: oadapter, else: unquote(adapter)
         if z do
           apply(z, :call, [call, action])

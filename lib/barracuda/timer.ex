@@ -1,10 +1,10 @@
 defmodule Barracuda.Timer do
-  @behaviour Barracuda.Client.Interceptor
+  @behaviour Barracuda.Interceptor
   require Logger
   
   def init(opts), do: opts
   
-  def link(next, %Barracuda.Client.Call{ action: action } = call) do
+  def link(next, %Barracuda.Call{ action: action } = call) do
     {time, result} = :timer.tc(fn ->
       next.(call)
     end)

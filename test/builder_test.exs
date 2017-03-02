@@ -1,9 +1,9 @@
 defmodule Barracuda.BuilderTest.Interceptor do
-  @behaviour Barracuda.Client.Interceptor
-  import Barracuda.Client.Call
+  @behaviour Barracuda.Interceptor
+  import Barracuda.Call
 
   def init(opts), do: opts
-  def link(next, %Barracuda.Client.Call{assigns: current} = params) do
+  def link(next, %Barracuda.Call{assigns: current} = params) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()
@@ -14,9 +14,9 @@ defmodule Barracuda.BuilderTest.Interceptor do
 end
 
 defmodule Barracuda.BuilderTest.Adapter do
-  import Barracuda.Client.Call
+  import Barracuda.Call
   
-  def call(%Barracuda.Client.Call{assigns: current}=params, _action) do
+  def call(%Barracuda.Call{assigns: current}=params, _action) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
   end
@@ -25,9 +25,9 @@ defmodule Barracuda.BuilderTest.Adapter do
 end
 
 defmodule Barracuda.BuilderTest.Adapter1 do
-  import Barracuda.Client.Call
+  import Barracuda.Call
   
-  def call(%Barracuda.Client.Call{assigns: current}=params, _action) do
+  def call(%Barracuda.Call{assigns: current}=params, _action) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
   end
@@ -43,7 +43,7 @@ defmodule Barracuda.BuilderTest.Intercepted do
 
   defp record_chain(current), do: current ++ ["hello"]
 
-  def hello(next, %Barracuda.Client.Call{assigns: current} = params) do
+  def hello(next, %Barracuda.Call{assigns: current} = params) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()
@@ -53,7 +53,7 @@ end
 defmodule Barracuda.BuilderTest do
   use ExUnit.Case, async: true
   alias Barracuda.BuilderTest.Intercepted
-  alias Barracuda.Client.Call
+  alias Barracuda.Call
 
   test "exports __link_*__" do
     exports = Intercepted.module_info()

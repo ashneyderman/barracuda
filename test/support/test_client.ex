@@ -3,7 +3,7 @@ defmodule Barracuda.TestClient.Hello1 do
   import Barracuda.Call
 
   def init(opts), do: opts
-  def link(next, %Barracuda.Call{assigns: current} = params) do
+  def link(next, %Barracuda.Call{assigns: current} = params, _opts \\ []) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()
@@ -17,7 +17,7 @@ defmodule Barracuda.TestClient.Hello2 do
   import Barracuda.Call
 
   def init(opts), do: opts
-  def link(next, %Barracuda.Call{assigns: current} = params) do
+  def link(next, %Barracuda.Call{assigns: current} = params, _opts \\ []) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()
@@ -82,7 +82,7 @@ defmodule Barracuda.TestClient do
 
   defp record_chain(current), do: current ++ ["hello"]
 
-  def hello(next, %Barracuda.Call{assigns: current} = params) do
+  def hello(next, %Barracuda.Call{assigns: current} = params, _opts \\ []) do
     params
     |> assign(:chain, record_chain(Map.get(current, :chain, [])))
     |> next.()

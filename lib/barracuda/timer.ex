@@ -4,11 +4,11 @@ defmodule Barracuda.Timer do
   
   def init(opts), do: opts
   
-  def link(next, %Barracuda.Call{ action: action } = call) do
+  def link(next, %Barracuda.Call{ action: action } = call, opts \\ []) do
     {time, result} = :timer.tc(fn ->
       next.(call)
     end)
-    Logger.info("#{action}: #{time} us")
+    Logger.info("#{action}: #{time} us [opts: #{inspect opts}]")
     result
   end
   

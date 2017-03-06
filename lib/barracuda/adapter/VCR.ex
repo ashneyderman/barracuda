@@ -13,13 +13,13 @@ defmodule Barracuda.Adapter.VCRRecorder do
   
   def init(opts), do: opts
   
-  def link(next, %Barracuda.Call{} = call) do
+  def link(next, %Barracuda.Call{} = call, _opts) do
     result = next.(call)
     record(call, result)
     result
   end
   
-  defp record(call, result) do
+  defp record(_call, _result) do
   end
   
 end

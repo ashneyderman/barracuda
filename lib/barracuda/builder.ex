@@ -93,11 +93,12 @@ defmodule Barracuda.Builder do
       opts
     end
 
-    if function_exported?(link, :link, 3) do
+    # TODO - investigate why this causes problems of recompilation?
+    #if function_exported?(link, :link, 3) do
       {:module, link, initialized_opts, guards}
-    else
-      raise ArgumentError, message: "#{inspect link} link must implement link/3"
-    end
+    #else
+    #  raise ArgumentError, message: "#{inspect link} link must implement link/3"
+    #end
   end
 
   defp init_fun_link(link, opts, guards) do

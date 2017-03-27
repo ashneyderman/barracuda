@@ -91,7 +91,7 @@ defmodule Barracuda.Client do
                                               adapter: unquote(adapter),
                                               options: unquote(options),
                                               config: unquote(config),
-                                              action: unquote(name)  }, unquote(name!))
+                                              action: unquote(name!)  }, unquote(name!))
         end
       else
         def unquote(name)(args \\ []) do
@@ -106,7 +106,7 @@ defmodule Barracuda.Client do
                                               adapter: unquote(adapter),
                                               options: unquote(options),
                                               config: unquote(config),
-                                              action: unquote(name)  }, unquote(name!))
+                                              action: unquote(name!)  }, unquote(name!))
         end
       end
     end

@@ -46,7 +46,7 @@ defmodule Barracuda.Client do
     calls = Module.get_attribute(env.module, :calls)
     interceptors = Module.get_attribute(env.module, :interceptors)
     otp_app = Module.get_attribute(env.module, :otp_app)
-    global_adapter = Module.get_attribute(env.module, :adapter)
+    global_adapter = lookup_config_adapter(env.module, otp_app) || Module.get_attribute(env.module, :adapter)
     for call <- calls do
       case call do
         {action, options, caller_line} ->
@@ -69,6 +69,10 @@ defmodule Barracuda.Client do
     end
   end
   
+  defp lookup_config_adapter(module, otp_app) do
+    Application.get_env(otp_app, module, Keyword.new) |> Keyword.get(:adapter)
+  end
+
   defp define_action(name, adapter, options, chain_size, {_, module} = config, caller_line) do
     link_name = :"__link_#{chain_size}__"
     name! = :"#{name}!"

@@ -67,8 +67,11 @@ defmodule Barracuda.Adapter.HTTP do
     case apply(__MODULE__, :request, [method, url, body, headers, options]) do
       {:ok, %Response{ status_code: status_code } = resp} when status_code == expected ->
         wfn = Keyword.get(options, :response_handler, &default_response_wrapper/1)
-        wfn.(resp)
+        r = wfn.(resp)
+        Logger.debug "result: #{inspect r, pretty: true}"
+        r
       {:ok, %Response{ status_code: status_code } = resp} when status_code != expected ->
+        Logger.debug "Error: #{inspect resp, pretty: true}"
         {:error, resp}
       error ->
         error
@@ -99,6 +102,7 @@ defmodule Barracuda.Adapter.HTTP do
             raise(Barracuda.Error, %{ message: "HTTP call resulted in error", data: error })
         end
       {:ok, %Response{ status_code: status_code } = resp}  when status_code != expected ->
+        Logger.debug "Error unexpected status (expected: #{inspect expected}, but was #{inspect status_code}): #{inspect resp, pretty: true}"
         raise(Barracuda.Error, %{ message: "HTTP call resulted in unexpected status code. Expected: #{expected}; Returned: #{status_code}", data: resp })
       other ->
         raise(Barracuda.Error, %{ message: "HTTP call resulted in error response.", data: other })
@@ -127,7 +131,9 @@ defmodule Barracuda.Adapter.HTTP do
   
   defp default_response_wrapper(%Response{}=resp) do
     if is_json(resp) do
-      Poison.decode(resp.body)
+      if resp.body == nil || resp.body == "",
+        do: {:ok, ""},
+      else: Poison.decode(resp.body)
     else
       {:ok, resp}
     end

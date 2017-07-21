@@ -49,33 +49,33 @@ defmodule Barracuda.Client do
     global_adapter = Module.get_attribute(env.module, :adapter)
     for call <- calls do
       case call do
-        {action, options, caller_ctx} ->
-          define_action(action, global_adapter, options, Enum.count(interceptors), {otp_app, env.module}, caller_ctx)
-        {action, adapter, options, caller_ctx} ->
-          define_action(action, adapter, options, Enum.count(interceptors), {otp_app, env.module}, caller_ctx)
+        {action, options, caller_line} ->
+          define_action(action, global_adapter, options, Enum.count(interceptors), {otp_app, env.module}, caller_line)
+        {action, adapter, options, caller_line} ->
+          define_action(action, adapter, options, Enum.count(interceptors), {otp_app, env.module}, caller_line)
       end
     end
   end
   
   defmacro call(name, options) do
-    quote bind_quoted: [name: name, options: options, line: __CALLER__.line] do
-      @calls {name, options, line}
+    quote bind_quoted: [name: name, options: options, caller_line: __CALLER__.line] do
+      @calls {name, options, caller_line}
     end
   end
   
   defmacro call(name, adapter, options) do
-    quote bind_quoted: [name: name, adapter: adapter, options: options, line: __CALLER__.line] do
-      @calls {name, adapter, options, line}
+    quote bind_quoted: [name: name, adapter: adapter, options: options, caller_line: __CALLER__.line] do
+      @calls {name, adapter, options, caller_line}
     end
   end
   
-  defp define_action(name, adapter, options, chain_size, {_, module} = config, line) do
+  defp define_action(name, adapter, options, chain_size, {_, module} = config, caller_line) do
     link_name = :"__link_#{chain_size}__"
     name! = :"#{name}!"
     
     has_required = Keyword.has_key?(options, :required)
-    define_docs(module, name,  adapter, options, 1, line)
-    define_docs(module, name!, adapter, options, 1, line)
+    define_docs(module, name,  adapter, options, 1, caller_line)
+    define_docs(module, name!, adapter, options, 1, caller_line)
 
     quote do
       if unquote(has_required) do
@@ -91,7 +91,7 @@ defmodule Barracuda.Client do
                                               adapter: unquote(adapter),
                                               options: unquote(options),
                                               config: unquote(config),
-                                              action: unquote(name)  }, unquote(name!))
+                                              action: unquote(name!)  }, unquote(name!))
         end
       else
         def unquote(name)(args \\ []) do
@@ -106,16 +106,16 @@ defmodule Barracuda.Client do
                                               adapter: unquote(adapter),
                                               options: unquote(options),
                                               config: unquote(config),
-                                              action: unquote(name)  }, unquote(name!))
+                                              action: unquote(name!)  }, unquote(name!))
         end
       end
     end
   end
 
-  defp define_docs(module, name, adapter, options, arity, line) do
+  defp define_docs(module, name, adapter, options, arity, caller_line) do
     docs = apply(adapter, :docs, [options, name])
-    args = [{:\\, [line: line], [{:options, [line: line], nil}, []]}]
-    Module.add_doc(module, line, :def, {name, arity}, args, docs)
+    args = [{:\\, [line: caller_line], [{:options, [line: caller_line], nil}, []]}]
+    Module.add_doc(module, caller_line, :def, {name, arity}, args, docs)
   end
 
 end

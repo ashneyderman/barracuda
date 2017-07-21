@@ -6,14 +6,15 @@ defmodule Barracuda.Interceptor do
   
   @doc ~S"""
   Optional callback that an interceptor can specify to process interceptor
-  options at compile time.
+  options at compile time. Those options then become available to the link
+  callback
   """
   @callback init(Keyword.t) :: Keyword.t
   
   @doc ~S"""
-  Required callback that gets invoked
+  Required callback that gets invoked when interception chain is un-winding
   """
-  @callback link(fun, Barracuda.Client.Call.t) :: term
+  @callback link(fun, Barracuda.Client.Call.t, Keyword.t) :: term
   
   @optional_callbacks init: 1
 end

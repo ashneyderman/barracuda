@@ -1,7 +1,7 @@
 defmodule Functional.Client.Timer do
   @behaviour Barracuda.Interceptor
   
-  def link(next, params) do
+  def link(next, params, _opts \\ []) do
     IO.puts "timer interceptor ..."
     {time, result} = :timer.tc(fn ->
        next.(["Functional.Client.Timer.link" | params])

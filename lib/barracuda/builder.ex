@@ -87,20 +87,25 @@ defmodule Barracuda.Builder do
   end
 
   defp init_module_link(link, opts, guards) do
-    initialized_opts = link.init(opts)
-
-    if function_exported?(link, :link, 2) do
-      {:module, link, initialized_opts, guards}
+    initialized_opts = if function_exported?(link, :init, 1) do
+      link.init(opts)
     else
-      raise ArgumentError, message: "#{inspect link} link must implement link/2"
+      opts
     end
+
+    # TODO - investigate why this causes problems of recompilation?
+    #if function_exported?(link, :link, 3) do
+      {:module, link, initialized_opts, guards}
+    #else
+    #  raise ArgumentError, message: "#{inspect link} link must implement link/3"
+    #end
   end
 
   defp init_fun_link(link, opts, guards) do
     {:function, link, opts, guards}
   end
 
-  defp quote_link({link_type, link, _opts, _guards}, idx, _env, _builder_opts) do
+  defp quote_link({link_type, link, opts, _guards}, idx, _env, _builder_opts) do
     pname = String.to_atom("__link_#{idx-1}__")
     fname = String.to_atom("__link_#{idx}__")
     case link_type do
@@ -110,7 +115,7 @@ defmodule Barracuda.Builder do
             unquote(link).link(
               fn(params) ->
                 unquote(pname)(params, action)
-              end, call)
+              end, call, unquote(opts))
           end
         end
       :function ->
@@ -119,7 +124,7 @@ defmodule Barracuda.Builder do
             unquote(link)(
               fn(params) ->
                 unquote(pname)(params, action)
-              end, call)
+              end, call, unquote(opts))
           end
         end
     end

@@ -73,4 +73,4 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
     
 ## Acknowledgements
 
-The original idea and draft implementation is due to [Kevin Montuori](https://github.com/kevinmontuori)
+The original idea and draft implementation is due to [Kevin Montuori](https://github.com/bunnylushington)

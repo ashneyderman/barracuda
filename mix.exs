@@ -3,7 +3,7 @@ defmodule Barracuda.Mixfile do
 
   def project do
     [app: :barracuda,
-     version: "0.5.0-dev",
+     version: "0.6.0-dev",
      elixir: "~> 1.3",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
@@ -19,8 +19,8 @@ defmodule Barracuda.Mixfile do
 
   defp deps do
     [
-      {:httpoison, "~> 0.9.0"},
-      {:poison, "~> 2.2"},
+      {:httpoison, "~> 0.9"},
+      {:poison, "~> 2.2 or ~> 3.0"},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end

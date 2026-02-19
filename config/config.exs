@@ -1,6 +1,6 @@
 # This file is responsible for configuring your application
 # and its dependencies with the aid of the Mix.Config module.
-use Mix.Config
+import Config
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
@@ -31,4 +31,4 @@ use Mix.Config
 
 config :barracuda, Github,
   base_url: "https://api.github.com",
-  "accept": "application/vnd.github.v3+json"
+  accept: "application/vnd.github.v3+json"

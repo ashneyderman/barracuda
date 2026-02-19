@@ -2,7 +2,7 @@ defmodule Barracuda.Adapter.HTTP do
   require Logger
   use HTTPoison.Base
   alias HTTPoison.Response
-  
+
   def docs(options, _action) do
     docs = Keyword.get(options, :doc, "No documentation provided.")
     verb = Keyword.get(options, :verb, :"GET")
@@ -12,44 +12,44 @@ defmodule Barracuda.Adapter.HTTP do
     [#{ to_string(verb) |> String.upcase }] #{ path }
     """
   end
-  
+
   def call(%Barracuda.Call{ options: options, args: args, config: config } = call, action) do
     path = Keyword.fetch!(options, :path)
     response = apply(__MODULE__, local_method(options, action), [path, options, args, config])
     %Barracuda.Call{ call | response: response }
   end
-  
+
   defp local_method(options, action) do
     verb = options |> Keyword.get(:verb)
     if String.ends_with?(Atom.to_string(action), "!"),
       do: :"do_#{Atom.to_string(verb)}!",
     else: :"do_#{Atom.to_string(verb)}"
   end
-  
+
   def do_get(path, options, args, location),
     do: do_request(:get, path, options, args, location)
-  
+
   def do_get!(path, options, args, location),
     do: do_request!(:get, path, options, args, location)
-  
+
   def do_post(path, options, args, location),
     do: do_request(:post, path, options, args, location)
-  
+
   def do_post!(path, options, args, location),
     do: do_request!(:post, path, options, args, location)
-  
+
   def do_put(path, options, args, location),
     do: do_request(:put, path, options, args, location)
-  
+
   def do_put!(path, options, args, location),
     do: do_request!(:put, path, options, args, location)
-  
+
   def do_delete(path, options, args, location),
     do: do_request(:delete, path, options, args, location)
-  
+
   def do_delete!(path, options, args, location),
     do: do_request!(:delete, path, options, args, location)
-  
+
   defp do_request(method, path, options, args, location) do
     cfg = config(location)
     {headers, rest_args0} = construct_headers(cfg, options, args)
@@ -77,7 +77,7 @@ defmodule Barracuda.Adapter.HTTP do
         error
     end
   end
-  
+
   defp do_request!(method, path, options, args, location) do
     cfg = config(location)
     {headers, rest_args0} = construct_headers(cfg, options, args)
@@ -108,27 +108,27 @@ defmodule Barracuda.Adapter.HTTP do
         raise(Barracuda.Error, %{ message: "HTTP call resulted in error response.", data: other })
     end
   end
-  
+
   defp config({app, module}), do: Application.get_env(app, module, [])
-  
+
   defp is_json(%Response{headers: headers}), do: is_json(headers)
   defp is_json(headers) do
     Logger.debug "headers: #{inspect headers, pretty: true}"
-    headers_map = headers |> Enum.into(HashDict.new)
+    headers_map = headers |> Enum.into(%{})
     key = headers_map
-          |> Dict.keys
+          |> Map.keys
           |> Enum.find(nil, &(String.downcase(&1) == "content-type"))
-  
+
     if key do
       headers_map
-      |> Dict.get(key, "")
+      |> Map.get(key, "")
       |> String.downcase
       |> String.starts_with?(["application/json"])
     else
       false
     end
   end
-  
+
   defp default_response_wrapper(%Response{}=resp) do
     if is_json(resp) do
       if resp.body == nil || resp.body == "",
@@ -138,13 +138,13 @@ defmodule Barracuda.Adapter.HTTP do
       {:ok, resp}
     end
   end
-  
+
   defp construct_absolute_url(cfg, path, _options, args) do
     base_url = Keyword.get(cfg, :base_url)
     {interpolated_path, remaining_args} = interpolate_path(path, args, true)
     {base_url <> interpolated_path, remaining_args}
   end
-  
+
   defp construct_headers(cfg, options, args) do
     required_headers = Keyword.get(options, :required_headers, [])
     required_headers |> Enum.reduce({[], args}, fn(key, {headers, arguments}) ->
@@ -153,7 +153,7 @@ defmodule Barracuda.Adapter.HTTP do
       {[{key, value} | headers], Keyword.delete(arguments, atom_key)}
     end)
   end
-  
+
   defp construct_body(headers, _options, args) do
     if Keyword.get(args, :body, nil) do
       {args |> Keyword.get(:body, "") |> encode_body(headers),
@@ -162,11 +162,16 @@ defmodule Barracuda.Adapter.HTTP do
       {"", args}
     end
   end
-  
+
   defp encode_body(body, _headers) when is_binary(body), do: body
-  defp encode_body(body, headers),
-    do: if is_json(headers), do: Poison.encode!(body), else: body
-  
+  defp encode_body(body, headers) do
+    if is_json(headers) do
+      Poison.encode!(body)
+    else
+      body
+    end
+  end
+
   def interpolate_path(path, nil, _), do: {path, []}
   def interpolate_path(path, args, consume_remainder) do
     {interpolated_path, remaining_args} = replace_path_parts(path, args)
@@ -184,7 +189,7 @@ defmodule Barracuda.Adapter.HTTP do
       {interpolated_path, remaining_args}
     end
   end
-  
+
   # TODO - there is gotta be an agentless way to do this
   defp replace_path_parts(path, args) do
     {:ok, arguments} = Agent.start(fn -> args end)

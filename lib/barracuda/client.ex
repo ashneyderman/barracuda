@@ -1,17 +1,17 @@
 defmodule Barracuda.Client do
   @moduledoc ~S"""
   A DSL to define a client that work with Barracuda.
-  
+
   It provides a set of macros to generate call chains. For example:
-  
+
       defmodule GithubClient do
         use Barracuda.Client, adapter: Barracuda.Adapter.HTTP,
                               otp_app: :app
-  
+
         interceptor Barracuda.Performance
         interceptor Barracuda.Validator
         interceptor Barracuda.ResultsConverter
-        
+
         call :create,
           path: "customers.json",
           verb: :post,
@@ -19,7 +19,7 @@ defmodule Barracuda.Client do
           container: "customer",
           expect: 201,
           api: :v1
-          
+
         call :delete, Barracuda.Adapter.RPC,
           required: [:first_name, :last_name, :email]
       end
@@ -28,12 +28,12 @@ defmodule Barracuda.Client do
   defmacro __using__(opts) do
     quote do
       use Barracuda.Builder, unquote(opts)
-      
+
       Module.register_attribute __MODULE__, :otp_app, []
       @otp_app unquote(opts)[:otp_app] || raise "client expects :otp_app to be given"
       Module.register_attribute __MODULE__, :adapter, []
       @adapter unquote(opts)[:adapter]
-      
+
       Module.register_attribute __MODULE__, :calls, accumulate: true
       import unquote(__MODULE__), only: [call: 2, call: 3]
       import Barracuda.Builder, only: [interceptor: 1, interceptor: 2]
@@ -41,7 +41,7 @@ defmodule Barracuda.Client do
       @before_compile unquote(__MODULE__)
     end
   end
-  
+
   defmacro __before_compile__(env) do
     calls = Module.get_attribute(env.module, :calls)
     interceptors = Module.get_attribute(env.module, :interceptors)
@@ -56,19 +56,19 @@ defmodule Barracuda.Client do
       end
     end
   end
-  
+
   defmacro call(name, options) do
     quote bind_quoted: [name: name, options: options, caller_line: __CALLER__.line] do
       @calls {name, options, caller_line}
     end
   end
-  
+
   defmacro call(name, adapter, options) do
     quote bind_quoted: [name: name, adapter: adapter, options: options, caller_line: __CALLER__.line] do
       @calls {name, adapter, options, caller_line}
     end
   end
-  
+
   defp lookup_config_adapter(module, otp_app) do
     Application.get_env(otp_app, module, Keyword.new) |> Keyword.get(:adapter)
   end
@@ -76,7 +76,7 @@ defmodule Barracuda.Client do
   defp define_action(name, adapter, options, chain_size, {_, module} = config, caller_line) do
     link_name = :"__link_#{chain_size}__"
     name! = :"#{name}!"
-    
+
     has_required = Keyword.has_key?(options, :required)
     define_docs(module, name,  adapter, options, 1, caller_line)
     define_docs(module, name!, adapter, options, 1, caller_line)

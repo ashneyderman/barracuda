@@ -1,6 +1,6 @@
 defmodule Functional.Client.Timer do
   @behaviour Barracuda.Interceptor
-  
+
   def link(next, params, _opts \\ []) do
     IO.puts "timer interceptor ..."
     {time, result} = :timer.tc(fn ->
@@ -9,11 +9,11 @@ defmodule Functional.Client.Timer do
     IO.puts "time: #{inspect time} us"
     ["Functional.Client.Timer.link:result" | result]
   end
-  
+
 end
 
 defmodule Functional.Client do
-  
+
   #
   # retry
   def retry(next, params) do
@@ -27,9 +27,9 @@ defmodule Functional.Client do
         retry(next, ["retry" | params])
     end
   end
-  
+
   def do_user_repos(nil, params) do
-    if rem(:random.uniform(100), 2) == 0 do
+    if rem(:rand.uniform(100), 2) == 0 do
       IO.puts "user_repos: raising expection"
       raise "just for the heck of it"
     else
@@ -37,12 +37,12 @@ defmodule Functional.Client do
       ["do_user_repos" | params]
     end
   end
-  
+
   def user_repos_purely_functional() do
     user_repos_purely_functional([])
   end
   def user_repos_purely_functional(args) do
-    :random.seed(:os.timestamp)
+    :rand.seed(:os.timestamp)
     f = [Functional.Client.Timer, &retry/2, &do_user_repos/2]
     |> Enum.reverse
     |> Enum.reduce(nil,
@@ -53,12 +53,12 @@ defmodule Functional.Client do
                    end)
     f.(args)
   end
-  
+
   def user_repos_unfolded_functional() do
     user_repos_unfolded_functional([])
   end
   def user_repos_unfolded_functional(args) do
-    :random.seed(:os.timestamp)
+    :rand.seed(:os.timestamp)
     Functional.Client.Timer.link(
       fn(params1) ->
         retry(fn(params0) ->
@@ -67,32 +67,32 @@ defmodule Functional.Client do
       end,
       %Barracuda.Call{ args: args })
   end
-  
+
   def __f0(params, action) do
     IO.puts "__f0: #{inspect action}"
     apply(__MODULE__, action, [nil, params])
   end
-  
+
   def __f1(params, action) do
     retry(fn(p) ->
            __f0(p, action)
           end, params)
   end
-  
+
   def __f2(params, action) do
     Functional.Client.Timer.link(
       fn(p) ->
         __f1(p, action)
       end, params)
   end
-  
+
   def user_repos_shaped_for_macros() do
     user_repos_shaped_for_macros([])
   end
   def user_repos_shaped_for_macros(params) do
-    :random.seed(:os.timestamp)
+    :rand.seed(:os.timestamp)
     IO.puts "test2"
     __f2(params, :do_user_repos)
   end
-      
+
 end

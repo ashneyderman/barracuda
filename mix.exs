@@ -2,15 +2,17 @@ defmodule Barracuda.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :barracuda,
-     version: "0.7.0-dev",
-     elixir: "~> 1.3",
-     elixirc_paths: elixirc_paths(Mix.env),
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     deps: deps(),
-     description: description(),
-     package: package()]
+    [
+      app: :barracuda,
+      version: "1.0.0",
+      elixir: "~> 1.18",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      deps: deps(),
+      description: description(),
+      package: package()
+    ]
   end
 
   def application do
@@ -19,14 +21,14 @@ defmodule Barracuda.Mixfile do
 
   defp deps do
     [
-      {:httpoison, "~> 1.6"},
-      {:poison, "~> 2.2 or ~> 3.0"},
+      {:httpoison, "~> 2.3"},
+      {:poison, "~> 6.0"},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_),     do: ["lib"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp description do
     """
@@ -35,11 +37,13 @@ defmodule Barracuda.Mixfile do
   end
 
   defp package do
-    [# These are the default files included in the package
-     name: :barracuda,
-     files: ["lib", "mix.exs", "README*", "LICENSE*"],
-     maintainers: ["Alex Shneyderman"],
-     licenses: ["MIT"],
-     links: %{"GitHub" => "https://github.com/ashneyderman/barracuda"}]
+    # These are the default files included in the package
+    [
+      name: :barracuda,
+      files: ["lib", "mix.exs", "README*", "LICENSE*"],
+      maintainers: ["Alex Shneyderman"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/ashneyderman/barracuda"}
+    ]
   end
 end
